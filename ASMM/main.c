@@ -191,11 +191,29 @@ int main(int argc,char *argv[])
 			if (g1==2 && g2==3)
 			ans=root(f2,f3,w1,w2,E);
 			if (ans==NAN)
-			printf("No root");
+			printf("No root\n");
 			else
-			printf("%lf\n",ans);
-		
+			printf("The root is %lf\n",ans);
+		}
+		else
+		if (strstr(ti,argv[i])-ti == 0) 
+		{
+			int g1;
+            g1=(int)(*argv[i+1])-(int)('0');
+			ld w1,w2,ans;
+			w1=get_val_str(argv[i+2]);
+			w2=get_val_str(argv[i+3]);
 			
+			if (g1==1)
+			ans=integral(f1,w1,w2,E);
+			if (g1==2)
+			ans=integral(f2,w1,w2,E);
+			if (g1==3)
+			ans=integral(f3,w1,w2,E);
+			if (ans==NAN)
+			printf("No integral\n");
+			else
+			printf("The integral is %lf\n",ans);
 		}
 	}
     ld X1,X2,X3;
