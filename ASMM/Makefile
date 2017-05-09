@@ -1,5 +1,5 @@
 all: main.o ff1.o ff2.o ff3.o fd1.o fd2.o fd3.o 
-	gcc -o MyProg -m32 ff1.o ff2.o ff3.o fd1.o fd2.o fd3.o main.o
+	gcc -o MyProg -m32 -lm ff1.o ff2.o ff3.o fd1.o fd2.o fd3.o main.o
 main.o: main.c
 	gcc -m32 -lm -c -o main.o main.c
 ff1.o: ff1.asm
