@@ -11,7 +11,10 @@ extern ld ff3(ld x);
 extern ld fd1(ld x);
 extern ld fd2(ld x);
 extern ld fd3(ld x);
-ll num_iter = 0;
+ll n_iter = 0;
+ll num_iter1 = 0;
+ll num_iter2 = 0;
+ll num_iter3 = 0;
 ld get_val_str(char *sc)//pars str to double
 {
 	int m,j=0,len=1,mode =0;
@@ -96,20 +99,21 @@ ld f3(int mode,ld x)
 }
 ld root(ld (*f)(int,ld),ld (*g)(int,ld),ld a,ld b,ld eps1) //find root by Newton's method
 {
-    ll n_iter = 1;
+	esp1/=100;
+    n_iter=1;
     ld x0 = (a+b)/2,x1;
 	
     x1 = x0 - (f(0,x0) - g(0,x0)) / (f(1,x0) - g(1,x0)); // determine first vers of x
 	    
 	if (fabs(f(0,x0)- g(0,x0)) < eps1 ) // maybe i find a root
     {
-        num_iter = max(num_iter,n_iter);
+        
         return x0;
     }
     n_iter++;
     if (fabs(f(0,x1)- g(0,x1)) < eps1 ) // or maybe now
     {
-        num_iter = max(num_iter,n_iter);
+        
         return x1;
     }
     while ((fabs(f(0,x1)- g(0,x1)) > eps1) && (fabs(x1-x0) > eps1))  // find root
@@ -119,11 +123,12 @@ ld root(ld (*f)(int,ld),ld (*g)(int,ld),ld a,ld b,ld eps1) //find root by Newton
 		        
 		n_iter++;
     }
-    num_iter = max(num_iter,n_iter);
+    
     return x1;
 }
 ld integral(ld (*f)(int,ld),ld a,ld b,ld eps2) // find integral by Trapezoid's method
 {
+	eps2 /= 12;
     ld sum1 = 0,sum2 = 0;
     ll k = 100;
     ld delt = (b-a) / k; // determine first split
@@ -132,7 +137,18 @@ ld integral(ld (*f)(int,ld),ld a,ld b,ld eps2) // find integral by Trapezoid's m
         sum1 += (f(0,a + i * delt) + f(0,a + (i+1) * delt)) * delt / 2;
     }
 	
-    k *= 10;	
+	sum2=sum1+(f(0,a)+f(0,b))/2*delt;
+	
+	while (fabs(sum2-sum1)>eps2)
+	{
+		k*=10;
+		delt = (b-a) / k;
+		sum1=sum2;
+		sum2=sum1+(f(0,a)+f(0,b))/2*delt;
+		
+	}   
+		return sum2;
+	/* 	
     delt = (b-a) / k; // determine second split
     for (ll i = 0;i < k;i++) //calc second integral sum
     {
@@ -149,10 +165,13 @@ ld integral(ld (*f)(int,ld),ld a,ld b,ld eps2) // find integral by Trapezoid's m
             sum2 += (f(0,a + i * delt) + f(0,a + (i+1) * delt)) * delt / 2;
         }
     }
-    return sum2;
+    return sum2;*/
+	
+
 }
 int main(int argc,char *argv[])
 {
+	int mmode = 0;
     char h[5] = "-help";
     char it[5]= "-iter";
     char ab[5]= "-absp";
@@ -194,6 +213,7 @@ int main(int argc,char *argv[])
 			printf("No root\n");
 			else
 			printf("The root is %lf\n",ans);
+			mmode = 1;
 		}
 		else
 		if (strstr(ti,argv[i])-ti == 0) 
@@ -214,12 +234,16 @@ int main(int argc,char *argv[])
 			printf("No integral\n");
 			else
 			printf("The integral is %lf\n",ans);
+			mmode = 1;
 		}
 	}
     ld X1,X2,X3;
  	X1=root(f1,f2,0,2,E);
+	num_iter1=n_iter;
    	X2=root(f1,f3,-2,-1,E);
+	num_iter2=n_iter;
 	X3=root(f2,f3,-2,2,E);
+	num_iter3=n_iter;
     ld S1,S2,S3,Ans; // sqaer of first,second and therd figure
     S1=fabs(integral(f1,X2,X1,E));
     S2=fabs(integral(f2,X1,X3,E));
@@ -230,17 +254,21 @@ int main(int argc,char *argv[])
         if (strstr(ab,argv[i])-ab == 0)
         {
             printf("The abscissas of the intersection points are %lf %lf %lf\n",X1,X2,X3);
+			mmode = 1;
         }
         if (strstr(it,argv[i])-it == 0)
         {
-            printf("The number of iterations are %lld\n",num_iter);
+            printf("The number of 1 and 2 func's iterations are %lld\n",num_iter1);
+			printf("The number of 1 and 3 func's iterations are %lld\n",num_iter2);
+			printf("The number of 2 and 3 func's iterations are %lld\n",num_iter1);
+			mmode = 1;
         }
-		if (strstr(an,argv[i])-an == 0)
-        {
-            printf("The area of a plane figure bounded by three curves is %lf\n",Ans);
-        }
+		
     }
-
+	
+	if (mmode)
+	return 0;
+	printf("The answer is %lf\n",Ans);
     
     return 0;
 }
