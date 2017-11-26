@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <math.h>
 ////////////////////////////////////////////////////////////////////////
+const long double EPS= 0.00001;
 enum {
     ROW_MAX_LEN = 100,
     ROW_MAX_NUM = 100,
@@ -11,13 +13,12 @@ enum {
 typedef struct row
 {
     int32_t m;
-    int32_t el[ROW_MAX_LEN];
+    long double el[ROW_MAX_LEN];
 } row_t;
 typedef row_t *row_ptr;
 typedef struct matrix{
     int32_t n, m;
-    row_ptr row[ROW_MAX_NUM];
-    row_ptr colum;  
+    row_ptr row[ROW_MAX_NUM]; 
 } matrix_t;
 typedef matrix_t *matrix_ptr;
 ////////////////////////////////////////////////////////////////////////
@@ -33,6 +34,7 @@ int32_t row_new(row_ptr *row_new, int32_t m) {
     return 0;
 }
 int32_t matrix_new(matrix_ptr *mat_new, int32_t n, int32_t m){
+    n++;
     if ((n >= ROW_MAX_NUM) || (m >= ROW_MAX_LEN)) {
         return 1;
     }
@@ -47,9 +49,6 @@ int32_t matrix_new(matrix_ptr *mat_new, int32_t n, int32_t m){
             return 1;
         }
     }
-    if (row_new(&((*mat_new)->colum), n)) {
-            return 1;
-        }
     return 0;
 }
 void matrix_del(matrix_ptr matr) {
@@ -59,16 +58,11 @@ void matrix_del(matrix_ptr matr) {
     for (int32_t i = 0; i < matr->n; i++) {
         free(matr->row[i]);
     }
-    free(matr->colum);
     free(matr);
 }
 /////////////////////////////////////////////////////////////////////////
-int32_t el_func_gen(int32_t i, int32_t j){
-    int32_t mid = (i + j) / 2;
-    return mid;
-}
-int32_t el_func_gen_b(int32_t i) {
-    int32_t mid = i;
+int32_t el_func_gen(long double i, long double j){
+    long double mid = (i + j + 5) / 2;
     return mid;
 }
 int32_t matrix_gen(matrix_ptr matr){
@@ -76,16 +70,14 @@ int32_t matrix_gen(matrix_ptr matr){
         for (int32_t j = 0; j < matr->m; j++) {
             matr->row[i]->el[j] = el_func_gen(i, j);
         }
-        matr->colum->el[i] = el_func_gen_b(i);
     }
     return 0;
 }
 int32_t matrix_input(matrix_ptr matr) {
     for (int32_t i = 0; i < matr->n; i++) {
         for (int32_t j = 0; j < matr->m; j++) {
-            scanf("%d", &matr->row[i]->el[j]);
+            scanf("%Lf", &matr->row[i]->el[j]);
         }
-        scanf("%d", &matr->colum->el[i]);
     }
     return 0;
 }
@@ -96,14 +88,14 @@ void matrix_output(matrix_ptr matr) {
     printf("print \n");
     for (int32_t i = 0; i < matr->n; i++) {
         for (int32_t j = 0; j < matr->m; j++) {
-            printf("%d ", matr->row[i]->el[j]);
+            printf("%5.3Lf ", matr->row[i]->el[j]);
         }
-        printf("%d\n",matr->colum->el[i]);
+        printf("\n");
     }
 }
 /////////////////////////////////////////////////////////////////////////
-void int_swap(int32_t *first, int32_t *second) {
-    int32_t mid = *first;
+void d_swap(long double *first, long double *second) {
+    long double mid = *first;
     *first = *second;
     *second = mid;
 }
@@ -112,9 +104,37 @@ int32_t row_swap(row_ptr first, row_ptr second) {
         return 1;
     }
     for (int32_t i = 0; i < first->m; i++) {
-        int_swap(&first->el[i],&second->el[i]);
+        d_swap(&first->el[i],&second->el[i]);
     }
     return 0;
+}
+void gaus_modify(matrix_ptr matr) {
+    int32_t where[matr->m];
+    for (int32_t i = 0; i < matr->m; i++) {
+        where[i] = -1;
+    }
+    for (int32_t i = 0, j = 0; i < matr->n && j < (matr->m - 1); j++) {
+        int i1 = i;
+        for (int mid = i1; mid < matr->n; mid++) {
+            if (fabs(matr->row[mid]->el[j]) > fabs(matr->row[i1]->el[j])) {
+                i1 = mid;
+            }
+        }
+        if (fabs(matr->row[i1]->el[j]) < EPS) {
+            continue;
+        }
+        row_swap(matr->row[i1],matr->row[i]);
+        
+        where[j] = i;
+        for (int mid = i + 1; mid < matr->n ; mid++) {
+                long double c = matr->row[mid]->el[j] / matr->row[i]->el[j];
+                for (int mid1 = j; mid1 < matr->m; mid1++) {
+                    matr->row[mid]->el[mid1] -= matr->row[i]->el[mid1] * c;
+            }
+        }
+        
+        i++;
+    }
 }
 /////////////////////////////////////////////////////////////////////////
 int main(void) {
@@ -124,7 +144,11 @@ int main(void) {
         matrix_del(matr);
         return 0;
     }
-    printf("%d\n",matrix_gen(matr));
+    matrix_gen(matr);
+    printf("Matrix \n");
+    matrix_output(matr);
+    gaus_modify(matr);
+    printf("Matrix after\n");
     matrix_output(matr);
     matrix_del(matr);
     return 0;
