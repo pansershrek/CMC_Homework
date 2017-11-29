@@ -17,8 +17,9 @@ typedef struct row
 } row_t;
 typedef row_t *row_ptr;
 typedef struct matrix{
-    int32_t n, m, stat;
+    int32_t n, m, stat, rem;
     row_ptr row[ROW_MAX_NUM]; 
+    row_ptr obr[ROW_MAX_NUM];
     int32_t where[ROW_MAX_LEN];
     long double ans[ROW_MAX_LEN];
 } matrix_t;
@@ -35,8 +36,20 @@ int32_t row_new(row_ptr *row_new, int32_t m) {
     (*row_new)->m = m;
     return 0;
 }
+int32_t row_new_obr(row_ptr *row_new, int32_t m, int32_t i) {
+    if (m >= ROW_MAX_LEN) {
+        return 1;
+    }
+    (*row_new) = (row_t*) malloc(sizeof(row_t));
+    if (!(*row_new)) {
+        return 1;
+    }
+    (*row_new)->m = m;
+    (*row_new)->el[i] = 1;
+    return 0;
+}
 int32_t matrix_new(matrix_ptr *mat_new, int32_t n, int32_t m){
-    n++;
+    
     if ((n >= ROW_MAX_NUM) || (m >= ROW_MAX_LEN)) {
         return 1;
     }
@@ -48,6 +61,9 @@ int32_t matrix_new(matrix_ptr *mat_new, int32_t n, int32_t m){
     (*mat_new)->m = m;
     for (int32_t i = 0; i < n; i++) {
         if (row_new(&((*mat_new)->row[i]), m)) {
+            return 1;
+        }
+        if (row_new_obr(&((*mat_new)->obr[i]), m, i)) {
             return 1;
         }
     }
@@ -95,6 +111,28 @@ void matrix_output(matrix_ptr matr) {
         printf("\n");
     }
 }
+void matrix_obr_output(matrix_ptr matr) {
+    if (!matr) {
+        return;
+    }
+    printf("print obr\n");
+    for (int32_t i = 0; i < matr->n; i++) {
+        for (int32_t j = 0; j < matr->m - 1; j++) {
+            printf("%5.3Lf ", matr->obr[i]->el[j]);
+        }
+        printf("\n");
+    }
+}
+
+void matrix_output_ans(matrix_ptr matr) {
+    if (!matr) {
+        return;
+    }
+    for (int32_t i = 0; i < matr->m -1; i++) {
+        printf("%5.3Lf ",matr->ans[i]);
+    }
+    printf("\n");
+}
 int32_t row_copy(row_ptr r_new, row_ptr r_old) {
     r_new->m = r_old->m;
     for (int32_t i = 0; i < r_new->m; i++) {
@@ -127,13 +165,16 @@ int32_t row_swap(row_ptr first, row_ptr second) {
     }
     return 0;
 }
-void gaus(matrix_ptr matr, int32_t flag, long double *det) {
+void gaus(matrix_ptr matr, int32_t flag, long double *det_out) {
+    if (!matr) {
+        return;
+    }
     int32_t m = matr->m - 1;
     if (flag) {
         m++;
     }
-    (*det) = 1;
-    for (int32_t i = 0; i < matr->m; i++) {
+    long double det = 1;
+    for (int32_t i = 0; i < m; i++) {
         matr->where[i] = -1;
     }
     for (int32_t i = 0, j = 0; i < matr->n && j < m; j++) {
@@ -144,31 +185,45 @@ void gaus(matrix_ptr matr, int32_t flag, long double *det) {
                 break;
             }
         }
+        if (i1 != i) {
+            det *= -1;
+        }
+        det *= matr->row[i]->el[i];
         if (fabs(matr->row[i1]->el[j]) < EPS) {
             continue;
         }
         row_swap(matr->row[i1],matr->row[i]);
         matr->where[j] = i; 
-        if (i1 != i) {
-            (*det) *= -1;
-        }
-        (*det) *= matr->row[i]->el[i];
-        for (int mid = i + 1; mid < matr->n ; mid++) {
+        
+        for (int mid = 0; mid < matr->n ; mid++) {
+                if (mid == i) {
+                    continue;
+                }
                 long double c = matr->row[mid]->el[j] / matr->row[i]->el[j];
                 for (int mid1 = j; mid1 < matr->m; mid1++) {
                     matr->row[mid]->el[mid1] -= matr->row[i]->el[mid1] * c;
-            }
+                }
+                for (int mid1 = 0; mid1 < matr->m - 1; mid1++) {
+                    matr->obr[mid]->el[mid1] -= matr->obr[i]->el[mid1] * c;
+                }
         }
         i++;
     }
+    if (det_out) {
+        *det_out = det;
+    }
+    matr->rem = 1;
 }
-void gaus_modify(matrix_ptr matr, int32_t flag, long double *det) {
+void gaus_modify(matrix_ptr matr, int32_t flag, long double *det_out) {
+    if (!matr) {
+        return ;
+    }
     int32_t m = matr->m -1 ;
     if (flag) {
         m++;
     }
-    (*det) = 1;
-    for (int32_t i = 0; i < matr->m; i++) {
+    long double det = 1;
+    for (int32_t i = 0; i < m; i++) {
         matr->where[i] = -1;
     }
     for (int32_t i = 0, j = 0; i < matr->n && j < m; j++) {
@@ -178,41 +233,56 @@ void gaus_modify(matrix_ptr matr, int32_t flag, long double *det) {
                 i1 = mid;
             }
         }
+        if (i1 != i) {
+            det *= -1;
+        }
+        det *= matr->row[i]->el[i];
         if (fabs(matr->row[i1]->el[j]) < EPS) {
             continue;
         }
         row_swap(matr->row[i1],matr->row[i]);
         matr->where[j] = i;
-        if (i1 != i) {
-            (*det) *= -1;
-        }
-        (*det) *= matr->row[i]->el[i];
-        for (int mid = i + 1; mid < matr->n ; mid++) {
+        
+        for (int mid = 0; mid < matr->n ; mid++) {
+                if (mid == i) {
+                    continue;
+                }
                 long double c = matr->row[mid]->el[j] / matr->row[i]->el[j];
                 for (int mid1 = j; mid1 < matr->m; mid1++) {
                     matr->row[mid]->el[mid1] -= matr->row[i]->el[mid1] * c;
-            }
-          }
+                }
+                for (int mid1 = 0; mid1 < matr->m - 1; mid1++) {
+                    matr->obr[mid]->el[mid1] -= matr->obr[i]->el[mid1] * c;
+                }
+        }
         i++;
     }
+    if (det_out) {
+        *det_out = det;
+    }
+    matr->rem = 1;
 }
 void matrix_get_ans(matrix_ptr matr) {
-    for (int i = 0; i < matr->m; i++) {
+    if (!matr->rem) {
+        return;
+    }
+    for (int i = 0; i < matr->m - 1; i++) {
         if (matr->where[i] != -1) {
-            matr->ans[i] = matr->row[matr->where[i]]->el[matr->m] / matr->row[matr->where[i]]->el[i];
+            matr->ans[i] = matr->row[matr->where[i]]->el[matr->m - 1] / matr->row[matr->where[i]]->el[i];
         }
     }
+    matrix_output_ans(matr);
     for (int i = 0; i < matr->n; i++) {
         long double sum = 0;
-        for (int j = 0; j < matr->m; j++) {
+        for (int j = 0; j < matr->m - 1; j++) {
             sum +=  matr->ans[j] * matr->row[i]->el[j];
         }
-        if (fabs(sum - matr->row[i]->el[matr->m]) > EPS) {
+        if (fabs(sum - matr->row[i]->el[matr->m - 1]) > EPS) {
             matr->stat = 0;
             return;
         }
     }
-    for (int i = 0; i < matr->m; i++) {
+    for (int i = 0; i < matr->m - 1; i++) {
         if (matr->where[i] == -1) {
             matr->stat = 2;
             return;
@@ -221,22 +291,46 @@ void matrix_get_ans(matrix_ptr matr) {
     matr->stat = 1;
     return; 
 }
+int matrix_obr(matrix_ptr matr) {
+    if (!matr || (matr->stat != 1)) {
+        return 1;
+    }
+    for (int32_t i = 0; i < matr->n; i++) {
+        for (int32_t j = 0; j < matr->m - 1; j++) {
+            matr->obr[i]->el[j] /= matr->row[i]->el[i];
+        }
+    }
+    return 0;
+}
 /////////////////////////////////////////////////////////////////////////
 int main(void) {
-    
-    /*matrix_ptr matr = NULL;
-    if (matrix_new(&matr,5,5)) {
+    matrix_ptr matr = NULL;
+
+    if (matrix_new(&matr,4,5)) {
         matrix_del(matr);
         return 0;
     }
-    matr->n = 4;
-    matr->m = 4;
+    long double det;
     matrix_input(matr);
     printf("Matrix \n");
     matrix_output(matr);
-    gaus(matr,0);
+    gaus(matr,0,&det);
     printf("Matrix after\n");
     matrix_output(matr);
-    matrix_del(matr);*/
+    printf("------------\n");
+    matrix_get_ans(matr);
+    printf("Num %d\n",matr->stat);
+    if (matr->stat == 1) {
+       matrix_output_ans(matr); 
+    } else if (!matr->stat) {
+        printf("No ans\n");
+    } else {
+        printf("Inf ans\n");
+    }
+    matrix_obr(matr);
+    printf("Obr matr\n");
+    matrix_obr_output(matr);
+    printf("Det %5.3Lf\n", det);
+    matrix_del(matr); 
     return 0;
 }
