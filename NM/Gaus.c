@@ -17,6 +17,7 @@ typedef struct row
 } row_t;
 typedef row_t *row_ptr;
 typedef struct matrix{
+    long double M, x;
     int32_t n, m, stat, rem;
     row_ptr row[ROW_MAX_NUM]; 
     row_ptr obr[ROW_MAX_NUM];
@@ -79,15 +80,33 @@ void matrix_del(matrix_ptr matr) {
     free(matr);
 }
 /////////////////////////////////////////////////////////////////////////
-int32_t el_func_gen(long double i, long double j){
-    long double mid = (i + j + 5) / 2;
+long double el_func_gen(long double i, long double j, long double M){
+    long double mid, q;
+    q = 1.001 - 2 * M / 1000;
+    if (i == j) {
+        mid = (q - 1);
+        mid = pow(mid, (long double)(i + j));
+    } else {
+        mid = pow(q, (long double)(i + j));
+        mid += 0.1 * (j - i);
+    }
+    return mid;
+}
+long double el_func_gen_b(long double i, int n, long double x) {
+    long double mid;
+    mid = fabs(x - n / 10);
+    mid *= i;
+    mid *= sinl(x);
     return mid;
 }
 int32_t matrix_gen(matrix_ptr matr){
     for (int32_t i = 0; i < matr->n; i++) {
-        for (int32_t j = 0; j < matr->m; j++) {
-            matr->row[i]->el[j] = el_func_gen(i, j);
+        for (int32_t j = 0; j < matr->m - 1; j++) {
+            matr->row[i]->el[j] = el_func_gen(i, j, matr->M);
         }
+    }
+    for (int32_t i = 0; i < matr->n; i++) {
+        matr->row[i]->el[matr->m - 1] = el_func_gen_b(i, matr->n, matr->x);
     }
     return 0;
 }
@@ -322,8 +341,14 @@ int main(void) {
         printf("Enter the dimension of matrix\n");
         scanf("%d",&n);
         matrix_new(&matr,n,n + 1);
+        printf("Enter the M parametr\n");
+        scanf("%Lf",&matr->M);
+        printf("Enter the x parametr\n");
+        scanf("%Lf",&matr->x);
         matrix_gen(matr);
-    }
+        printf("The gen matrix is\n");
+        matrix_output(matr);
+    }   
     matr1 = matrix_copy(matr);
     printf("Solve by modify Gause method\n");
     gaus_modify(matr1, 0, NULL);
