@@ -91,7 +91,23 @@ int32_t matrix_gen(matrix_ptr matr){
     }
     return 0;
 }
+int32_t row_copy(row_ptr r_new, row_ptr r_old) {
+    r_new->m = r_old->m;
+    for (int32_t i = 0; i < r_new->m; i++) {
+        r_new->el[i] = r_old->el[i];
+    }
+    return 0;
+}
+matrix_ptr matrix_copy(matrix_ptr m_old) {
+    matrix_ptr m_new;
+    matrix_new(&m_new,m_old->n,m_old->m);
+    for (int32_t i = 0; i < m_new->n; i++) {
+        row_copy(m_new->row[i],m_old->row[i]);
+    }
+    return m_new;
+}
 int32_t matrix_input(matrix_ptr matr) {
+    printf("Enter the affiliated matrix\n");
     for (int32_t i = 0; i < matr->n; i++) {
         for (int32_t j = 0; j < matr->m; j++) {
             scanf("%Lf", &matr->row[i]->el[j]);
@@ -103,7 +119,6 @@ void matrix_output(matrix_ptr matr) {
     if (!matr) {
         return;
     }
-    printf("print \n");
     for (int32_t i = 0; i < matr->n; i++) {
         for (int32_t j = 0; j < matr->m; j++) {
             printf("%5.3Lf ", matr->row[i]->el[j]);
@@ -115,7 +130,6 @@ void matrix_obr_output(matrix_ptr matr) {
     if (!matr) {
         return;
     }
-    printf("print obr\n");
     for (int32_t i = 0; i < matr->n; i++) {
         for (int32_t j = 0; j < matr->m - 1; j++) {
             printf("%5.3Lf ", matr->obr[i]->el[j]);
@@ -128,27 +142,18 @@ void matrix_output_ans(matrix_ptr matr) {
     if (!matr) {
         return;
     }
+    if (matr->stat == 0) {
+        printf("No ans\n");
+        return;
+    } else if (matr->stat == 2) {
+        printf("Inf ans\n");
+        return;
+    }
+    printf("There is an ans\n");
     for (int32_t i = 0; i < matr->m -1; i++) {
         printf("%5.3Lf ",matr->ans[i]);
     }
     printf("\n");
-}
-int32_t row_copy(row_ptr r_new, row_ptr r_old) {
-    r_new->m = r_old->m;
-    for (int32_t i = 0; i < r_new->m; i++) {
-        r_new->el[i] = r_old->el[i];
-    }
-    return 0;
-}
-int32_t matrix_copy(matrix_ptr m_new, matrix_ptr m_old) {
-    if (matrix_new(&m_new,m_old->n,m_old->m)) {
-        matrix_del(m_new);
-        return 1;
-    }
-    for (int32_t i = 0; i < m_new->n; i++) {
-        row_copy(m_new->row[i],m_old->row[i]);
-    }
-    return 0;
 }
 /////////////////////////////////////////////////////////////////////////
 void d_swap(long double *first, long double *second) {
@@ -271,7 +276,6 @@ void matrix_get_ans(matrix_ptr matr) {
             matr->ans[i] = matr->row[matr->where[i]]->el[matr->m - 1] / matr->row[matr->where[i]]->el[i];
         }
     }
-    matrix_output_ans(matr);
     for (int i = 0; i < matr->n; i++) {
         long double sum = 0;
         for (int j = 0; j < matr->m - 1; j++) {
@@ -304,33 +308,38 @@ int matrix_obr(matrix_ptr matr) {
 }
 /////////////////////////////////////////////////////////////////////////
 int main(void) {
-    matrix_ptr matr = NULL;
-
-    if (matrix_new(&matr,4,5)) {
-        matrix_del(matr);
-        return 0;
-    }
+    matrix_ptr matr = NULL, matr1 = NULL;
+    int n, type;
     long double det;
-    matrix_input(matr);
-    printf("Matrix \n");
-    matrix_output(matr);
-    gaus(matr,0,&det);
-    printf("Matrix after\n");
-    matrix_output(matr);
-    printf("------------\n");
-    matrix_get_ans(matr);
-    printf("Num %d\n",matr->stat);
-    if (matr->stat == 1) {
-       matrix_output_ans(matr); 
-    } else if (!matr->stat) {
-        printf("No ans\n");
+    printf("Enter the type of input (1 <=> from input | 2 <=> gen by formula)\n");
+    scanf("%d",&type);
+    if (type == 1) {
+        printf("Enter the dimension of matrix\n");
+        scanf("%d",&n);
+        matrix_new(&matr,n,n + 1);
+        matrix_input(matr);
     } else {
-        printf("Inf ans\n");
+        printf("Enter the dimension of matrix\n");
+        scanf("%d",&n);
+        matrix_new(&matr,n,n + 1);
+        matrix_gen(matr);
     }
-    matrix_obr(matr);
-    printf("Obr matr\n");
-    matrix_obr_output(matr);
-    printf("Det %5.3Lf\n", det);
-    matrix_del(matr); 
+    matr1 = matrix_copy(matr);
+    printf("Solve by modify Gause method\n");
+    gaus_modify(matr1, 0, NULL);
+    matrix_get_ans(matr1);
+    matrix_output_ans(matr1);
+    printf("Solve by Gause method\n");
+    matr1 = matrix_copy(matr);
+    gaus(matr1, 0, &det);
+    matrix_get_ans(matr1);
+    matrix_output_ans(matr1);
+    if (matr1->stat == 1) {
+        printf("The det of matrix is %5.3Lf\n", det);
+    }
+    if (!matrix_obr(matr1)) {
+        printf("The reverse matrix is \n");
+        matrix_obr_output(matr1);
+    }
     return 0;
 }
